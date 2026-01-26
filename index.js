@@ -3,8 +3,8 @@ const TelegramBot = require("node-telegram-bot-api");
 const cron = require("node-cron");
 const solarlunar = require("solarlunar");
 
-// 👉 CHAT_ID: có thể hardcode hoặc dùng /chatid để lấy
-const CHAT_ID = 6049331143;
+// ================== CONFIG ==================
+let CHAT_ID = null;
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
@@ -18,7 +18,6 @@ const giolist = [
 function lunarToSolar(lunarDay, lunarMonth, solarYear) {
   let lunarYear = solarYear;
   if (lunarMonth >= 11) lunarYear = solarYear - 1;
-
   return solarlunar.lunar2solar(lunarYear, lunarMonth, lunarDay, false);
 }
 
@@ -28,13 +27,55 @@ function daysBetween(from, to) {
 }
 
 // ================== COMMANDS ==================
+bot.on("message", (msg) => {
+  if (!msg.text) return;
+  if (/^(gio|ngay|\/chatid|\/start)/i.test(msg.text)) return;
 
-// 👉 Lấy chat_id (dùng 1 lần là đủ)
-bot.onText(/\/chatid/i, (msg) => {
-  bot.sendMessage(msg.chat.id, `🆔 Chat ID của bạn là:\n${msg.chat.id}`);
+  bot.sendMessage(msg.chat.id, "ℹ️ Gõ /start để xem hướng dẫn sử dụng bot");
 });
 
-// 👉 Xem ngày giỗ dương lịch
+bot.onText(/\/start/i, (msg) => {
+  const text = `
+🤖 *Bot Nhắc Ngày Giỗ (Âm → Dương)*
+
+Bot giúp bạn:
+• Tự động đổi ngày giỗ âm sang dương
+• Nhắc trước 1–3 ngày
+• Nhắc nhiều khung giờ trong ngày
+
+📌 *Hướng dẫn sử dụng*:
+1️⃣ Gõ */chatid*
+→ Bot sẽ ghi nhớ để gửi thông báo cho bạn
+
+2️⃣ Gõ *gio*
+→ Xem ngày giỗ năm hiện tại (dương lịch)
+
+3️⃣ Gõ *ngay*
+→ Xem còn bao nhiêu ngày tới ngày giỗ
+
+⏰ *Thời gian nhắc*:
+• 7h sáng
+• 11h trưa
+• 9h tối
+• 11h tối
+
+⚠️ *Lưu ý*:
+Bot chỉ nhắc sau khi bạn đã gõ */chatid*
+
+🙏 Dùng để ghi nhớ & tưởng niệm người thân
+`;
+
+  bot.sendMessage(msg.chat.id, text, { parse_mode: "Markdown" });
+});
+
+bot.onText(/\/chatid/i, (msg) => {
+  CHAT_ID = msg.chat.id;
+  bot.sendMessage(
+    CHAT_ID,
+    `🆔 Chat ID của bạn là:\n${CHAT_ID}\n\n✅ Bot sẽ dùng ID này để nhắc giỗ`,
+  );
+});
+
 bot.onText(/gio/i, (msg) => {
   const year = new Date().getFullYear();
   let text = `📅 Ngày giỗ năm ${year}:\n\n`;
@@ -47,11 +88,9 @@ bot.onText(/gio/i, (msg) => {
   bot.sendMessage(msg.chat.id, text);
 });
 
-// 👉 Xem còn bao nhiêu ngày
 bot.onText(/ngay/i, (msg) => {
   const today = new Date();
   const currentYear = today.getFullYear();
-
   let text = "⏳ Số ngày còn lại tới các ngày giỗ:\n\n";
 
   giolist.forEach((g) => {
@@ -64,7 +103,6 @@ bot.onText(/ngay/i, (msg) => {
     }
 
     const daysLeft = daysBetween(today, gioDate);
-
     text += `• ${g.name}: còn ${daysLeft} ngày (${r.cDay}/${r.cMonth}/${r.cYear})\n`;
   });
 
@@ -72,23 +110,33 @@ bot.onText(/ngay/i, (msg) => {
 });
 
 // ================== CRON ==================
-// 🔔 Nhắc giỗ lúc 7h sáng mỗi ngày
-cron.schedule("0 7 * * *", () => {
-  const now = new Date();
-  const d = now.getDate();
-  const m = now.getMonth() + 1;
-  const y = now.getFullYear();
+// ⏰ 7h, 11h, 21h, 23h
+cron.schedule("0 7,11,21,23 * * *", () => {
+  if (!CHAT_ID) return;
+
+  const today = new Date();
+  const year = today.getFullYear();
 
   giolist.forEach((g) => {
-    const r = lunarToSolar(g.lunar.day, g.lunar.month, y);
+    let r = lunarToSolar(g.lunar.day, g.lunar.month, year);
+    let gioDate = new Date(r.cYear, r.cMonth - 1, r.cDay);
 
-    if (r.cDay === d && r.cMonth === m && r.cYear === y) {
+    if (gioDate < today) {
+      r = lunarToSolar(g.lunar.day, g.lunar.month, year + 1);
+      gioDate = new Date(r.cYear, r.cMonth - 1, r.cDay);
+    }
+
+    const daysLeft = daysBetween(today, gioDate);
+
+    if (daysLeft >= 0 && daysLeft <= 3) {
+      let label = daysLeft === 0 ? "🔔 HÔM NAY" : `⏰ Còn ${daysLeft} ngày`;
+
       bot.sendMessage(
         CHAT_ID,
-        `🔔 Hôm nay là ${g.name} (${g.lunar.day}/${g.lunar.month} âm lịch)`,
+        `${label} tới ${g.name}\n📅 ${r.cDay}/${r.cMonth}/${r.cYear} (âm ${g.lunar.day}/${g.lunar.month})`,
       );
     }
   });
 });
 
-console.log("🤖 Bot đang chạy – nhắc giỗ tự động lúc 7h");
+console.log("🤖 Bot đã chạy – nhắc giỗ trước 1–3 ngày, 4 khung giờ/ngày");
