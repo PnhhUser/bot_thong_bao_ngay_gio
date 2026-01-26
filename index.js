@@ -109,9 +109,8 @@ bot.onText(/ngay/i, (msg) => {
   bot.sendMessage(msg.chat.id, text);
 });
 
-// ================== CRON ==================
-// ⏰ 7h, 11h, 21h, 23h
-cron.schedule("0 7,11,21,23 * * *", () => {
+// ================== CRON JOB ==================
+function remindJob() {
   if (!CHAT_ID) return;
 
   const today = new Date();
@@ -137,6 +136,13 @@ cron.schedule("0 7,11,21,23 * * *", () => {
       );
     }
   });
+}
+
+// ⏰ 7h, 11h, 21h, 21h35, 23h
+cron.schedule("0 7,11,21,23 * * *", remindJob, {
+  timezone: "Asia/Ho_Chi_Minh",
 });
 
-console.log("🤖 Bot đã chạy – nhắc giỗ trước 1–3 ngày, 4 khung giờ/ngày");
+cron.schedule("35 21 * * *", remindJob, {
+  timezone: "Asia/Ho_Chi_Minh",
+});
