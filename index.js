@@ -18,8 +18,17 @@ const giolist = [
 function lunarToSolar(lunarDay, lunarMonth, solarYear) {
   let lunarYear = solarYear;
   if (lunarMonth >= 11) lunarYear = solarYear - 1;
-  return solarlunar.lunar2solar(lunarYear, lunarMonth, lunarDay, false);
+
+  let r = solarlunar.lunar2solar(lunarYear, lunarMonth, lunarDay, false);
+
+  // ⚠️ fallback nếu ngày không tồn tại (ví dụ 30/12)
+  if (!r) {
+    r = solarlunar.lunar2solar(lunarYear, lunarMonth, lunarDay - 1, false);
+  }
+
+  return r;
 }
+
 
 function daysBetween(from, to) {
   const oneDay = 24 * 60 * 60 * 1000;
