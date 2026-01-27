@@ -9,8 +9,8 @@ let CHAT_ID = null;
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 const giolist = [
-  { name: "Giỗ ông ngoại", lunar: { day: 4, month: 2 } },
-  { name: "Giỗ mẹ", lunar: { day: 14, month: 5 } },
+  { name: "Giỗ ông ngoại", lunar: { day: 30, month: 12 } },
+  { name: "Giỗ mẹ", lunar: { day: 15, month: 5 } },
   { name: "Giỗ bà ngoại", lunar: { day: 9, month: 12 } },
 ];
 
