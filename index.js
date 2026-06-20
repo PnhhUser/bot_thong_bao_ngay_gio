@@ -163,3 +163,18 @@ cron.schedule("0 7,11,21,23 * * *", remindJob, {
 cron.schedule("35 21 * * *", remindJob, {
   timezone: "Asia/Ho_Chi_Minh",
 });
+
+
+
+const http = require("http");
+
+const PORT = process.env.PORT || 3000;
+
+http
+  .createServer((req, res) => {
+    res.writeHead(200);
+    res.end("Telegram bot is running");
+  })
+  .listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+  });
